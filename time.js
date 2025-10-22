@@ -1,20 +1,32 @@
-function BirthDay() {
-    window.setTimeout("BirthDay()", 1000);
-        BirthDay = new Date("25/10/2006 00:00:00"); // 修改出生日期
-        today = new Date();
-        timeold = (today.getTime() - BirthDay.getTime());
-        sectimeold = timeold / 1000
-        secondsold = Math.floor(sectimeold);
-        msPerDay = 24 * 60 * 60 * 1000
-        e_daysold = timeold / msPerDay
-        daysold = Math.floor(e_daysold);
-        e_hrsold = (e_daysold - daysold) * 24;
-        hrsold = Math.floor(e_hrsold);
-        e_minsold = (e_hrsold - hrsold) * 60;
-        minsold = Math.floor((e_hrsold - hrsold) * 60);
-        seconds = Math.floor((e_minsold - minsold) * 60);
-        span_dt_dt.innerHTML = daysold + "天" //+ hrsold + "小时" + minsold + "分" + seconds + "秒";
+(function () {
+    'use strict';
+
+    const el = document.getElementById('span_dt_dt');
+    if (!el) {
+        console.warn('time.js: element #span_dt_dt not found');
+        return;
     }
 
-    BirthDay();
+    // 修改为目标出生时间（注意月份从0开始）
+    const birthDate = new Date(2006, 9, 25, 0, 0, 0);
 
+    function update() {
+        const now = new Date();
+        let diff = Math.floor((now.getTime() - birthDate.getTime()) / 1000); // 秒
+        if (!isFinite(diff) || diff < 0) {
+            el.textContent = '出生日期无效或在将来';
+            return;
+        }
+        const days = Math.floor(diff / (24 * 3600));
+        diff -= days * 24 * 3600;
+        const hours = Math.floor(diff / 3600);
+        diff -= hours * 3600;
+        const minutes = Math.floor(diff / 60);
+        const seconds = diff - minutes * 60;
+
+        el.textContent = days + ' 天 ' + hours + ' 小时 ' + minutes + ' 分 ' + seconds + ' 秒';
+    }
+
+    update();
+    setInterval(update, 1000);
+}());
