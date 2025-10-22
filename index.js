@@ -19,7 +19,7 @@ var S = {
         window.oRequestAnimationFrame ||
         window.msRequestAnimationFrame ||
         function (callback) {
-            window.setTimeout(callback, 2000 / 60);
+            window.setTimeout(callback, 1000 / 60);
         };
         return {
             init: function (el) {
@@ -159,6 +159,10 @@ var S = {
         this.z = args.z;
         this.a = args.a;
         this.h = args.h;
+        // keep any extra properties (like isCandle/isFlame)
+        for (var k in args) {
+            if (!(k in this)) this[k] = args[k];
+        }
     };
     S.Color = function (r, g, b, a) {
         this.r = r;
@@ -168,7 +172,7 @@ var S = {
     };
     S.Color.prototype = {
         render: function () {
-            return 'rgba(' + this.r + ',' + +this.g + ',' + this.b + ',' + this.a + ')';
+            return 'rgba(' + this.r + ',' + this.g + ',' + this.b + ',' + this.a + ')';
         }
     };
     S.Dot = function (x, y) {
@@ -184,15 +188,17 @@ var S = {
         this.c = new S.Color(255, 255, 255, this.p.a);
         this.t = this.clone();
         this.q = [];
+        this.isFlame = false;
+        this.isCandle = false;
     };
     S.Dot.prototype = {
         clone: function () {
             return new S.Point({
-                x: this.x,
-                y: this.y,
-                z: this.z,
-                a: this.a,
-                h: this.h
+                x: this.p.x,
+                y: this.p.y,
+                z: this.p.z,
+                a: this.p.a,
+                h: this.p.h
             });
         },
         _draw: function () {
@@ -242,6 +248,24 @@ var S = {
                         }));
                     }
                 }
+            }
+            // candle flame flicker: adjust flame color and alpha dynamically
+            if (this.isFlame) {
+                // flicker color between yellow/orange
+                this.c.r = 255;
+                this.c.g = 180 + Math.floor(Math.random() * 60);
+                this.c.b = 50;
+                this.c.a = 0.5 + Math.random() * 0.5;
+                // make flame slightly larger
+                this.p.z = 6 + Math.random() * 3;
+            }
+            // candle body subtle warm color
+            if (this.isCandle && !this.isFlame) {
+                this.c.r = 240;
+                this.c.g = 200;
+                this.c.b = 190;
+                this.c.a = 1;
+                this.p.z = 4;
             }
             d = this.p.a - this.t.a;
             this.p.a = Math.max(0.1, this.p.a - (d * 0.05));
@@ -367,7 +391,7 @@ var S = {
                 }
                 return {dots: dots, w: width, h: height};
             },
-            // cake: create a simple layered cake shape made of stacked rectangles
+            // cake: create a layered cake upright with three centered candles (body + flame)
             cake: function () {
                 var dots = [];
                 var tierDefs = [
@@ -377,11 +401,8 @@ var S = {
                 ];
                 // compute max width in pixels
                 var maxWidth = 0;
-                var ths = [];
                 for (var i = 0; i < tierDefs.length; i++) {
                     var pw = tierDefs[i].w * gap;
-                    var th = tierDefs[i].h * gap;
-                    ths.push(th);
                     if (pw > maxWidth) maxWidth = pw;
                 }
                 var y = 0;
@@ -410,13 +431,24 @@ var S = {
                 for (var di2 = 0; di2 < dots.length; di2++) {
                     if (dots[di2].y < topY) topY = dots[di2].y;
                 }
-                // add candles on top center
-                var candleCount = 5;
+                // add three centered candles (each candle = body + flame)
+                var candleCount = 3;
                 var spacing = Math.floor(maxWidth / (candleCount + 1));
+                // center candles horizontally by offsetting within cake width
+                var cakeLeft = 0; // points returned are relative to 0..maxWidth
                 for (var c = 1; c <= candleCount; c++) {
+                    var cx = c * spacing;
+                    // candle body (placed on top of cake)
                     dots.push(new S.Point({
-                        x: c * spacing,
-                        y: topY - gap
+                        x: cx,
+                        y: topY,
+                        isCandle: true
+                    }));
+                    // flame (slightly above)
+                    dots.push(new S.Point({
+                        x: cx,
+                        y: topY - gap,
+                        isFlame: true
                     }));
                 }
                 return {dots: dots, w: maxWidth, h: totalHeight + gap};
@@ -469,20 +501,33 @@ S.Shape = (function () {
                         a: Math.random(),
                         h: 18
                     }));
-                } else {
+                    }
+                else {
                     dots[d].move(new S.Point({
                         z: Math.random() * 5 + 5,
                         h: fast ? 18 : 30
                     }));
                 }
                 dots[d].s = true;
-                dots[d].move(new S.Point({
-                    x: n.dots[i].x + cx,
-                    y: n.dots[i].y + cy,
+                var target = n.dots[i];
+                var targetPoint = new S.Point({
+                    x: target.x + cx,
+                    y: target.y + cy,
                     a: 1,
-                    z: 5,
+                    z: target.isFlame ? 6 : 5,
                     h: 0
-                }));
+                });
+                dots[d].move(targetPoint);
+                // if the target point came from cake and marks a candle/flame, set dot properties/colors
+                if (target.isFlame) {
+                    dots[d].isFlame = true;
+                    dots[d].isCandle = false;
+                    dots[d].c = new S.Color(255, 210, 50, 1); // initial flame color
+                } else if (target.isCandle) {
+                    dots[d].isCandle = true;
+                    dots[d].isFlame = false;
+                    dots[d].c = new S.Color(240, 200, 200, 1); // candle body color (light)
+                }
                 n.dots = n.dots.slice(0, i).concat(n.dots.slice(i + 1));
                 d++;
             }
