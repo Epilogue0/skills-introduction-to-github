@@ -3,7 +3,7 @@ var S = {
         S.Drawing.init('.canvas');
         document.body.classList.add('body--ready');
             //想说什么
-            S.UI.simulate("祝你|生日快乐吖|#countdown 3|#cake|#time");
+            S.UI.simulate("祝你|生日快乐吖|#countdown 3|#cake");
             S.Drawing.loop(function () {
                 S.Shape.render();
             });
@@ -377,8 +377,11 @@ var S = {
                 ];
                 // compute max width in pixels
                 var maxWidth = 0;
+                var ths = [];
                 for (var i = 0; i < tierDefs.length; i++) {
                     var pw = tierDefs[i].w * gap;
+                    var th = tierDefs[i].h * gap;
+                    ths.push(th);
                     if (pw > maxWidth) maxWidth = pw;
                 }
                 var y = 0;
@@ -398,14 +401,22 @@ var S = {
                     y += th; // move up for next tier
                     totalHeight += th;
                 }
-                // add simple candle dots on top center
+                // invert vertically so cake is upright
+                for (var di = 0; di < dots.length; di++) {
+                    dots[di].y = totalHeight - dots[di].y;
+                }
+                // compute topY after inversion
+                var topY = Infinity;
+                for (var di2 = 0; di2 < dots.length; di2++) {
+                    if (dots[di2].y < topY) topY = dots[di2].y;
+                }
+                // add candles on top center
                 var candleCount = 5;
-                var topY = 0; // candles sit at very top (y=0)
                 var spacing = Math.floor(maxWidth / (candleCount + 1));
                 for (var c = 1; c <= candleCount; c++) {
                     dots.push(new S.Point({
                         x: c * spacing,
-                        y: topY - gap // place slightly above top tier
+                        y: topY - gap
                     }));
                 }
                 return {dots: dots, w: maxWidth, h: totalHeight + gap};
