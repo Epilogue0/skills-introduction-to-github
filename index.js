@@ -3,7 +3,7 @@ var S = {
         S.Drawing.init('.canvas');
         document.body.classList.add('body--ready');
             //想说什么
-            S.UI.simulate("祝你|生日快乐哟|#countdown 3|#rectangle 15x15|#circle 12 |#time");
+            S.UI.simulate("祝你|生日快乐吖|#countdown 3|#cake|#time");
             S.Drawing.loop(function () {
                 S.Shape.render();
             });
@@ -137,6 +137,10 @@ var S = {
                             }
                         }, 1000);
                     }
+                    break;
+                    case 'cake':
+                    // Render a cake-shaped dot matrix using ShapeBuilder.cake
+                    S.Shape.switchShape(S.ShapeBuilder.cake());
                     break;
                     default:
                     S.Shape.switchShape(S.ShapeBuilder.letter(current[0] === cmd ? 'HacPai' : current));
@@ -362,6 +366,49 @@ var S = {
                     }
                 }
                 return {dots: dots, w: width, h: height};
+            },
+            // cake: create a simple layered cake shape made of stacked rectangles
+            cake: function () {
+                var dots = [];
+                var tierDefs = [
+                    {w: 20, h: 4}, // bottom tier: 20x4
+                    {w: 14, h: 3}, // middle tier
+                    {w: 8, h: 2}   // top tier
+                ];
+                // compute max width in pixels
+                var maxWidth = 0;
+                for (var i = 0; i < tierDefs.length; i++) {
+                    var pw = tierDefs[i].w * gap;
+                    if (pw > maxWidth) maxWidth = pw;
+                }
+                var y = 0;
+                var totalHeight = 0;
+                for (var t = 0; t < tierDefs.length; t++) {
+                    var tw = tierDefs[t].w * gap;
+                    var th = tierDefs[t].h * gap;
+                    var offsetX = Math.floor((maxWidth - tw) / 2);
+                    for (var row = 0; row < th; row += gap) {
+                        for (var x = 0; x < tw; x += gap) {
+                            dots.push(new S.Point({
+                                x: offsetX + x,
+                                y: y + row
+                            }));
+                        }
+                    }
+                    y += th; // move up for next tier
+                    totalHeight += th;
+                }
+                // add simple candle dots on top center
+                var candleCount = 5;
+                var topY = 0; // candles sit at very top (y=0)
+                var spacing = Math.floor(maxWidth / (candleCount + 1));
+                for (var c = 1; c <= candleCount; c++) {
+                    dots.push(new S.Point({
+                        x: c * spacing,
+                        y: topY - gap // place slightly above top tier
+                    }));
+                }
+                return {dots: dots, w: maxWidth, h: totalHeight + gap};
             }
         };
     }());
